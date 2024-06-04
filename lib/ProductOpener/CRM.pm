@@ -63,6 +63,7 @@ BEGIN {
 		&update_last_export_date
 		&update_company_last_contact_login_date
 		&add_category_to_company
+		&update_template_download_date
 	);
 	%EXPORT_TAGS = (all => [@EXPORT_OK]);
 
@@ -83,7 +84,7 @@ my $crm_data;
 my @required_tag_labels = qw(onboarding);
 # Category (res.partner.category) must be defined in Odoo :
 # Contact > contact (individual or company) form > Tags field > "Search More"
-my @required_category_labels = ('Producer', 'AGENA3000', 'EQUADIS', 'CSV', 'Manual edit',);
+my @required_category_labels = ('Producer', 'AGENA3000', 'EQUADIS', 'CSV', 'Manual import',);
 
 # special commands to manipulate Odoo relation One2Many and Many2Many
 # see https://www.odoo.com/documentation/15.0/developer/reference/backend/orm.html#odoo.fields.Command
@@ -615,6 +616,17 @@ sub add_category_to_company($org_id, $label) {
 		if $log->is_debug();
 	return make_odoo_request('res.partner', 'write',
 		[[$org_ref->{crm_org_id}], {category_id => [[$commands{link}, $category_id]]}]);
+}
+
+sub update_template_download_date ($org_id) {
+	my $org_ref = retrieve_org($org_id);
+	return if not defined $org_ref->{crm_org_id};
+
+	my $date_string = _time_to_odoo_date_str(time());
+	$log->debug("update_template_download_date", {org_id => $org_id, date => $date_string})
+		if $log->is_debug();
+	return make_odoo_request('res.partner', 'write',
+		[[$org_ref->{crm_org_id}], {x_off_last_template_download_date => $date_string}]);
 }
 
 =head2 make_odoo_request (@params)

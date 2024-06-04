@@ -273,12 +273,9 @@ if ($type eq 'search_or_add') {
 				store_product($User_id, $product_ref, 'product_created');
 
 				# sync crm
-				if (defined $Org_id) {
+				if (defined $Org_id and not $admin and not $User{moderator} and not $User{pro_moderator}) {
 					update_last_import_date($Org_id, $product_ref->{created_t});
-					# if admin or moderator, add the category to the company
-					if (not $admin and not $User{moderator} and not $User{pro_moderator}) {
-						add_category_to_company($Org_id, 'Manual edit');
-					}
+					add_category_to_company($Org_id, 'Manual import');
 				}
 
 				$type = 'add';
