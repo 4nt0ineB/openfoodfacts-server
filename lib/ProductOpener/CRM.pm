@@ -62,6 +62,7 @@ BEGIN {
 		&update_last_import_date
 		&update_last_export_date
 		&update_company_last_contact_login_date
+		&add_category_to_company
 	);
 	%EXPORT_TAGS = (all => [@EXPORT_OK]);
 
@@ -82,7 +83,7 @@ my $crm_data;
 my @required_tag_labels = qw(onboarding);
 # Category (res.partner.category) must be defined in Odoo :
 # Contact > contact (individual or company) form > Tags field > "Search More"
-my @required_category_labels = qw(Producer);
+my @required_category_labels = ('Producer', 'AGENA3000', 'EQUADIS', 'CSV', 'Manual edit',);
 
 # special commands to manipulate Odoo relation One2Many and Many2Many
 # see https://www.odoo.com/documentation/15.0/developer/reference/backend/orm.html#odoo.fields.Command
@@ -599,6 +600,23 @@ sub _time_to_odoo_date_str($time) {
 	return sprintf("%04d-%02d-%02d", $year, $mon, $mday);
 }
 
+sub add_category_to_company($org_id, $label) {
+	my $org_ref = retrieve_org($org_id);
+	return if not defined $org_ref->{crm_org_id};
+
+	my $category_id = $crm_data->{category}{$label};
+	return if not defined $category_id;
+	if (not defined $category_id) {
+		$log->debug("add_category_to_company", {error => "Category `$label` not found in CRM"})
+			if $log->is_debug();
+		return;
+	}
+	$log->debug("add_category_to_company", {org_id => $org_id, label => $label, category_id => $category_id})
+		if $log->is_debug();
+	return make_odoo_request('res.partner', 'write',
+		[[$org_ref->{crm_org_id}], {category_id => [[$commands{link}, $category_id]]}]);
+}
+
 =head2 make_odoo_request (@params)
 
 Calls Odoo's API with the given parameters
@@ -685,8 +703,8 @@ sub init_crm_data() {
 		$crm_data = $tmp_crm_data;
 	} or do {
 		print STDERR "Failed to load CRM data from Odoo: $@\n";
-		die "Could not load CRM data from cache" if not defined $crm_data;
-		print STDERR "CRM data loaded from cache";
+		die "Could not load CRM data from cache\n" if not defined $crm_data;
+		print STDERR "CRM data loaded from cache\n";
 	};
 
 	store("$BASE_DIRS{CACHE_TMP}/crm_data.sto", $crm_data);
