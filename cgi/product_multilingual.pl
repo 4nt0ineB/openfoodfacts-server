@@ -54,7 +54,7 @@ use ProductOpener::Text qw/remove_tags_and_quote/;
 use ProductOpener::Events qw/send_event/;
 use ProductOpener::API qw/get_initialized_response/;
 use ProductOpener::APIProductWrite qw/skip_protected_field/;
-use ProductOpener::CRM qw/update_last_import_date/;
+use ProductOpener::CRM qw/update_last_import_date add_category_to_company/;
 
 use Apache2::RequestRec ();
 use Apache2::Const ();
@@ -275,6 +275,10 @@ if ($type eq 'search_or_add') {
 				# sync crm
 				if (defined $Org_id) {
 					update_last_import_date($Org_id, $product_ref->{created_t});
+					# if admin or moderator, add the category to the company
+					if (not $admin and not $User{moderator} and not $User{pro_moderator}) {
+						add_category_to_company($Org_id, 'Manual edit');
+					}
 				}
 
 				$type = 'add';
