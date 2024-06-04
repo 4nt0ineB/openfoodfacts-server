@@ -61,6 +61,7 @@ BEGIN {
 		&change_company_main_contact
 		&update_last_import_date
 		&update_last_export_date
+		&update_company_last_contact_login_date
 	);
 	%EXPORT_TAGS = (all => [@EXPORT_OK]);
 
@@ -563,13 +564,39 @@ sub update_company_last_action_date($org_id, $time, $field) {
 	if (not defined $org_ref->{crm_org_id}) {
 		return;
 	}
-	my ($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
-	$year += 1900;
-	$mon += 1;
-	my $date_string = sprintf("%04d-%02d-%02d", $year, $mon, $mday);
+	my $date_string = _time_to_odoo_date_str($time);
 	$log->debug("update_last_company_action_date", {org_id => $org_id, date => $date_string, field => $field})
 		if $log->is_debug();
 	return make_odoo_request('res.partner', 'write', [[$org_ref->{crm_org_id}], {$field => $date_string}]);
+}
+
+sub update_company_last_contact_login_date($org_ref, $user_ref) {
+
+	my $date = _time_to_odoo_date_str($user_ref->{last_login_t});
+
+	$log->debug("update_company_last_contact_login_date",
+		{org_id => $org_ref->{org_id}, user_id => $user_ref->{userid}, date => $date})
+		if $log->is_debug();
+
+	return make_odoo_request(
+		'res.partner',
+		'write',
+		[
+			[$org_ref->{crm_org_id}],
+			{
+				x_off_last_logged_org_contact_date => $date,
+				x_off_last_logged_org_contact => $user_ref->{crm_user_id}
+			}
+		]
+	);
+
+}
+
+sub _time_to_odoo_date_str($time) {
+	my ($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
+	$year += 1900;
+	$mon += 1;
+	return sprintf("%04d-%02d-%02d", $year, $mon, $mday);
 }
 
 =head2 make_odoo_request (@params)
