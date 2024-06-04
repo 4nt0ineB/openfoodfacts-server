@@ -56,6 +56,7 @@ BEGIN {
 		&set_org_gs1_gln
 
 		&org_name
+		&update_last_member_login_time
 
 	);    # symbols to export on request
 	%EXPORT_TAGS = (all => [@EXPORT_OK]);
@@ -489,6 +490,21 @@ sub org_name ($org_ref) {
 sub org_url ($org_ref) {
 
 	return canonicalize_tag_link("orgs", $org_ref->{org_id});
+}
+
+sub update_last_member_login_time($org_id, $user_ref) {
+
+	my $org_ref = retrieve_org($org_id);
+	return if not defined $org_ref;
+
+	$org_ref->{last_logged_member_t} = $user_ref->{last_login_t};
+	$org_ref->{last_logged_member} = $user_ref->{userid};
+
+	if (defined $org_ref->{crm_org_id}) {
+		update_company_last_contact_login_date($org_ref, $user_ref);
+	}
+
+	return;
 }
 
 1;
