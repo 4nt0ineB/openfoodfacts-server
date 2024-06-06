@@ -200,6 +200,37 @@ sub store_org ($org_ref) {
 				add_user_to_company($user_id, $org_ref->{crm_org_id});
 			}
 		}
+
+	}
+	elsif ( defined $previous_org_ref
+		&& $previous_org_ref->{valid_org} ne 'rejected'
+		&& $org_ref->{valid_org} eq 'rejected')
+	{
+		# send org rejection email to main contact
+		my $main_contact_user = $org_ref->{main_contact};
+		my $user_ref = retrieve_user($main_contact_user);
+
+		my $language = $user_ref->{preferred_language} || $user_ref->{initial_lc};
+		my $template_name = "rejected_org.tt.html";
+		# if template does not exist in the requested language, use English
+		my $template_path = "emails/$language/$template_name";
+		my $default_path = "emails/en/$template_name";
+		my $path = -e "$data_root/templates/$template_path" ? $template_path : $default_path;
+
+		my $template_data_ref = {
+			user => $user_ref,
+			org => $org_ref,
+		};
+
+		my $email = '';
+		my $res = process_template($path, $template_data_ref, \$email);
+		if ($email =~ /^\s*Subject:\s*(.*)\n/i) {
+			my $subject = $1;
+			my $body = $';
+			$body =~ s/^\n+//;
+			send_html_email($user_ref, $subject, $email);
+		}
+		$log->debug("store_org", {path => $path, email => $email, res => $res}) if $log->is_debug();
 	}
 
 	if (    defined $org_ref->{crm_org_id}
