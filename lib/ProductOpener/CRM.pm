@@ -61,6 +61,7 @@ BEGIN {
 		&change_company_main_contact
 		&update_last_import_date
 		&update_last_export_date
+		&get_company_url
 	);
 	%EXPORT_TAGS = (all => [@EXPORT_OK]);
 
@@ -679,6 +680,14 @@ sub _load_crm_data($model, $required_labels) {
 	}
 
 	return {map {$_ => $record_id{$_}} @$required_labels};
+}
+
+sub get_company_url($org_ref) {
+	if ($ProductOpener::Config2::crm_url and $org_ref->{crm_org_id}) {
+		return $ProductOpener::Config2::crm_url
+			. "/web#id=$org_ref->{crm_org_id}&menu_id=111&action=139&model=res.partner&view_type=form";
+	}
+	return;
 }
 
 1;
